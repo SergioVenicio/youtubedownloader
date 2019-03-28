@@ -1,0 +1,21 @@
+# DJANGO CONFIG
+DEBUG=on
+SECRECT_KEY=my_secret_key
+
+# POSTGRES CONFIG
+PG_CONTAINER_NAME=postgresql_youtubedownloader
+POSTGRES_DB=youtubedownloader
+POSTGRES_USER=youtubedownloader
+POSTGRES_PASSWORD=youtubedownloader
+PGPORT=5432
+PG_VOLUME=postgres_data
+
+# RabbitMQ
+AMQ_CONTAINER_NAME=amq_youtubedownloader
+AMQ_COOKIE=erlang_cookie
+AMQ_USER=rabbitmq_user
+AMQ_PASSWORD=rabbitmq_password
+AMQ_MANAGEMENT_PORT=15672
+AMQ_CONNECTIONS_PORT=5672
+AMQ_DEV_IMAGE=rabbitmq:3-management
+AMQ_PROD_IMAGE=rabbitmq

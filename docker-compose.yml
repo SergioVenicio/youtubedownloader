@@ -1,0 +1,36 @@
+version: '3.1'
+
+services:
+  database:
+    image: postgres:latest
+    container_name: ${PG_CONTAINER_NAME}
+    restart: always
+    volumes: 
+      - ./${PG_VOLUME}
+    ports:
+      - ${PGPORT}:${PGPORT}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: ${PG_VOLUME}
+  rabbitmq:
+    container_name: ${AMQ_CONTAINER_NAME}
+    image: ${AMQ_DEV_IMAGE}
+    hostname: ${AMQ_CONTAINER_NAME}
+    ports:
+        - "${AMQ_MANAGEMENT_PORT}:${AMQ_MANAGEMENT_PORT}"
+        - "${AMQ_CONNECTIONS_PORT}:${AMQ_CONNECTIONS_PORT}"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${AMQ_COOKIE}
+      RABBITMQ_DEFAULT_USER: ${AMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${AMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: "/"
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash -c "bash setup.sh && bash run.sh"
+    ports:
+      - "80:8000"
