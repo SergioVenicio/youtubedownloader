@@ -1,0 +1,18 @@
+<div class="container-fluid">
+    <div class="mt-5"></div>
+    <div class="row justify-content-center">
+        <div class="col-3">
+        <form method="post" action="/get">
+            {% csrf_token %}
+            <div class="form-group">
+                <div class="input-group">
+                    <input type="text" name="url" id="url" placeholder="Youtube url">
+                    <button type="submit" id="btn-get" class="btn btn-primary">
+                        get
+                    </button>
+                </div>
+            </div>
+        </form>
+        </div>
+    </div>
+</div>

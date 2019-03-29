@@ -16,7 +16,17 @@ import environ
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-env = environ.Path(BASE_DIR)
+root = environ.Path(BASE_DIR)
+env = environ.Env(
+    DEBUG=(bool, False),
+    POSTGRES_DB=(str, 'youtubedownloader'),
+    POSTGRES_USER=(str, 'youtubedownloader'),
+    POSTGRES_PASSWORD=(str, 'youtubedownloader'),
+    PG_CONTAINER_NAME=(str, 'postgresql_youtubedownloader'),
+    PGPORT=(str, '5432')
+)
+environ.Env.read_env()
+
 DEBUG = env('DEBUG')
 
 # Quick-start development settings - unsuitable for production
@@ -36,6 +46,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Project apps
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -71,14 +84,16 @@ WSGI_APPLICATION = 'youtube_downloader.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': env('POSTGRES_DB'),
+        'USER': env('POSTGRES_USER'),
+        'PASSWORD': env('POSTGRES_PASSWORD'),
+        'HOST': env('PG_CONTAINER_NAME'),
+        'PORT': env('PGPORT'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -102,7 +117,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
 TIME_ZONE = 'UTC'
 
