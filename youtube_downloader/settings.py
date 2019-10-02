@@ -29,6 +29,15 @@ environ.Env.read_env()
 
 DEBUG = env('DEBUG')
 
+RABBIT_USER = env('AMQ_USER')
+RABBIT_PWD = env('AMQ_PASSWORD')
+RABBIT_PORT = env('AMQ_CONNECTIONS_PORT')
+
+
+RABBIT_URL = f'amqp://{RABBIT_USER}:{RABBIT_PWD}@localhost:{RABBIT_PORT}/'
+
+VIDEOS_QUEUE = 'videos'
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
@@ -90,7 +99,7 @@ DATABASES = {
         'NAME': env('POSTGRES_DB'),
         'USER': env('POSTGRES_USER'),
         'PASSWORD': env('POSTGRES_PASSWORD'),
-        'HOST': env('PG_CONTAINER_NAME'),
+        'HOST': 'localhost',
         'PORT': env('PGPORT'),
     }
 }
