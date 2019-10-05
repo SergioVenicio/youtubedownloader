@@ -1,9 +1,7 @@
-import youtube_dl
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
 
-
-from .rabbit_connection import insert_in_queue
+from rabbit import queues
 
 
 def home(request):
@@ -12,6 +10,10 @@ def home(request):
 
 @require_http_methods(['POST'])
 def get(request):
-    insert_in_queue(request.POST.get('url'))
+    video_publisher = queues.VideoQueue()
+    video_publisher.exchange_declare()
+    video_publisher.queue_declare()
+    video_publisher.queue_bind()
+    video_publisher.publish_msg(request.POST.get('url'))
 
     return redirect('home_page')

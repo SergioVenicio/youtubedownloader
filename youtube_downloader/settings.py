@@ -11,32 +11,15 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
-import environ
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-root = environ.Path(BASE_DIR)
-env = environ.Env(
-    DEBUG=(bool, False),
-    POSTGRES_DB=(str, 'youtubedownloader'),
-    POSTGRES_USER=(str, 'youtubedownloader'),
-    POSTGRES_PASSWORD=(str, 'youtubedownloader'),
-    PG_CONTAINER_NAME=(str, 'postgresql_youtubedownloader'),
-    PGPORT=(str, '5432')
-)
-environ.Env.read_env()
+env_file = os.path.join(BASE_DIR, '.env')
+load_dotenv(env_file)
 
-DEBUG = env('DEBUG')
-
-RABBIT_USER = env('AMQ_USER')
-RABBIT_PWD = env('AMQ_PASSWORD')
-RABBIT_PORT = env('AMQ_CONNECTIONS_PORT')
-
-
-RABBIT_URL = f'amqp://{RABBIT_USER}:{RABBIT_PWD}@localhost:{RABBIT_PORT}/'
-
-VIDEOS_QUEUE = 'videos'
+DEBUG = os.getenv('DEBUG', False)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -96,11 +79,11 @@ WSGI_APPLICATION = 'youtube_downloader.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': env('POSTGRES_DB'),
-        'USER': env('POSTGRES_USER'),
-        'PASSWORD': env('POSTGRES_PASSWORD'),
-        'HOST': 'localhost',
-        'PORT': env('PGPORT'),
+        'NAME': os.getenv('POSTGRES_DB', 'youtube_downloader'),
+        'USER': os.getenv('POSTGRES_USER', 'youtube_downloader'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'youtube_downloader'),
+        'HOST': os.getenv('PGHOST', 'localhost'),
+        'PORT': os.getenv('PGPORT', 5432),
     }
 }
 

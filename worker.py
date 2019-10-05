@@ -1,39 +1,49 @@
-import pika
+# External
+from datetime import datetime
 import youtube_dl
 
-RABBIT_USER='rabbitmq_user'
-RABBIT_PWD='rabbitmq_password'
-RABBIT_PORT='5672'
+from rabbit import queues
 
-RABBIT_URL = f'amqp://{RABBIT_USER}:{RABBIT_PWD}@localhost:{RABBIT_PORT}/'
-
-VIDEOS_QUEUE = 'videos'
 
 OPTIONS = {
     'outtmpl': 'videos/%(title)s.%(ext)s',
 }
 
+# Video QUEUE
+video_comsumer = queues.VideoQueue()
+video_comsumer.setup_consumer()
 
-def __connection_rabbit():
-    new_conn = pika.BlockingConnection(pika.URLParameters(RABBIT_URL))
-    new_conn.channel().queue_declare(queue=VIDEOS_QUEUE, durable=True)
-    return new_conn
+# Logger Queue
+logger_publisher = queues.LoggerQueue()
+logger_publisher.setup_publisher()
 
-
-CHANNEL = __connection_rabbit().channel()
+# Error QUEUE
+error_publisher = queues.ErrorQueue()
+error_publisher.setup_publisher()
 
 
 def callback(channel, method, properties, body):
-    print(f" [x] Received {body.decode('utf-8')}")
+    decoded_body = body.decode('utf-8')
 
-    with youtube_dl.YoutubeDL(OPTIONS) as ydl:
-        response = ydl.extract_info(body.decode('utf-8'), download=True)
+    print(" [x] Received {%s}..." % decoded_body)
 
-    print(f" [x] Result {response['title']}")
+    try:
+        with youtube_dl.YoutubeDL(OPTIONS) as ydl:
+            response = ydl.extract_info(body.decode('utf-8'), download=True)
+    except Exception as e:
+        error = str(e)
+        logger_publisher.publish_msg({
+            'date': str(datetime.now()),
+            'error': error,
+            'service': 'video_consumer',
+        })
+        error_publisher.publish_msg(body)
+    else:
+        print(" [x] Result {%s}" % response['title'])
+
+    channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
-CHANNEL.basic_consume(
-    queue=VIDEOS_QUEUE, auto_ack=True, on_message_callback=callback
+video_comsumer.start_consuming(
+    callback
 )
-
-CHANNEL.start_consuming()
