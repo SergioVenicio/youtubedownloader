@@ -1,25 +1,19 @@
 import os
 
 import pika
-from dotenv import load_dotenv
-
-from youtube_downloader.settings import env_file
-
-
-load_dotenv(env_file)
 
 
 class Connection():
     def connect(self):
         credentials = pika.PlainCredentials(
-            username=os.getenv('AMQ_USER', 'guest'),
-            password=os.getenv('AMQ_PASSWORD', 'guest')
+            username=os.environ.get('AMQ_USER', 'rabbitmq_user'),
+            password=os.environ.get('AMQ_PASSWORD', 'rabbitmq_password')
         )
 
         params = pika.ConnectionParameters(
-            host=os.getenv('AMQ_HOST', 'localhost'),
-            port=os.getenv('AMQ_CONNECTIONS_PORT', 15672),
-            virtual_host=os.getenv('AMQ_VHOST', '/'),
+            host=os.environ.get('AMQ_HOST', 'localhost'),
+            port=os.environ.get('AMQ_CONNECTIONS_PORT', 5672),
+            virtual_host=os.environ.get('AMQ_VHOST', '/'),
             credentials=credentials
         )
 
