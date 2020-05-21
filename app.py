@@ -17,13 +17,18 @@ async def index(request):
 
 @app.route('/download', methods=['POST'])
 async def download(request):
+    urls = request.form.get('url').split(';')
+    list(map(publish, request.form.get('url').split(';')))
+    return response.redirect('/')
+
+
+def publish(msg):
     video_publisher = queues.VideoQueue()
     video_publisher.exchange_declare()
     video_publisher.queue_declare()
     video_publisher.queue_bind()
-    video_publisher.publish_msg(request.form.get('url'))
 
-    return response.redirect('/')
+    video_publisher.publish_msg(msg)
 
 
 if __name__ == '__main__':

@@ -37,6 +37,7 @@ class BasicQueue():
         )
 
     def publish_msg(self, body):
+        print(body)
         if isinstance(body, dict):
             body = json.dumps(body)
 
@@ -64,6 +65,32 @@ class BasicQueue():
     def setup_consumer(self):
         self.exchange_declare()
         self.queue_declare()
+
+
+class AsyncBaseClass:
+    def __init__(self, exchange, queue, key, loop):
+        __conn = Connection()
+
+        self.exchange = exchange
+        self.queue = queue
+        self.key = key
+
+        # Connection 
+        self.__open_conn = __conn.aio_connect(loop)
+
+
+    async def queue_declare(self, durable=True):
+        self.publisher_channel = await self.__open_conn.channel()
+
+        queue = await self.publisher_channel.queue_declare(
+            queue=self.queue,
+            auto_delete=durable
+        )
+        self._queue = queue
+
+    async def start_consuming(self, callback, auto_ack=False):
+        print(' [*] Start consuming from queue {%s}...' % self.queue)
+        await self._queue.consume(callback)
 
 
 class VideoQueue(BasicQueue):
