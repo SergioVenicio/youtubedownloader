@@ -1,3 +1,4 @@
+import json
 import asyncio
 import uvloop
 
@@ -6,7 +7,7 @@ from sanic.log import logger
 from signal import signal, SIGINT
 
 from main import app, template
-from rabbit import queues
+from rabbit import async_queues
 
 
 @app.route('/')
@@ -17,18 +18,16 @@ async def index(request):
 
 @app.route('/download', methods=['POST'])
 async def download(request):
-    urls = request.form.get('url').split(';')
-    list(map(publish, request.form.get('url').split(';')))
-    return response.redirect('/')
+    [await u for u in map(publish, set(request.form.get('url').split(';')))]
+    return response.redirect(app.url_for('index'))
 
 
-def publish(msg):
-    video_publisher = queues.VideoQueue()
-    video_publisher.exchange_declare()
-    video_publisher.queue_declare()
-    video_publisher.queue_bind()
-
-    video_publisher.publish_msg(msg)
+async def publish(url):
+    video_publisher = async_queues.Videos(asyncio.get_event_loop())
+    msg = json.dumps({
+        'url': url
+    })
+    await video_publisher.publish(msg, content_type='application/json')
 
 
 if __name__ == '__main__':

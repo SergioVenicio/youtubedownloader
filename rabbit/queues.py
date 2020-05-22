@@ -37,7 +37,6 @@ class BasicQueue():
         )
 
     def publish_msg(self, body):
-        print(body)
         if isinstance(body, dict):
             body = json.dumps(body)
 

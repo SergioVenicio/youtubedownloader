@@ -15,7 +15,6 @@ CONFIGS = {
 async def template(template_file, **kwargs):
     base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     templates_path = os.path.join(base_path, 'templates/')
-    print(templates_path)
     templates_loader = jinja2.FileSystemLoader(searchpath=templates_path)
     templates_env = jinja2.Environment(loader=templates_loader)
     template = templates_env.get_template(template_file)

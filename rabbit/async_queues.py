@@ -3,6 +3,9 @@ import aio_pika
 import asyncio
 import json
 import youtube_dl
+
+from elasticsearch import Elasticsearch
+from datetime import datetime
 from dotenv import load_dotenv
 
 
@@ -38,47 +41,87 @@ class AsyncBaseQueue:
             self.exchange, auto_delete=False
         )
 
-    async def message(self, body):
-        return aio_pika.Message(body, content_type='text/plain')
-
-
-class AsyncVideos(AsyncBaseQueue):
-    def __init__(self, io_loop):
-        super().__init__('downloader', 'videos', 'videos_queue', io_loop)
-
-    async def publish(self, body):
+    async def publish(self, body, content_type='text/plain'):
         if isinstance(body, dict):
-            body = json.dumps(body)
+            body = json.dumps(str(body))
 
         conn = await self.connect()
         channel = await conn.channel()
         exchange = await self.declare_exchange(channel)
-        await exchange.publish(self.message(body), self.key)
+        msg = await self.message(body, content_type)
+        await exchange.publish(msg, self.key)
 
         return
 
-    async def callback(self, message):
-        print(f'[*] consuming {self.queue} queue...')
-
-        with youtube_dl.YoutubeDL(OPTIONS) as ydl:
-            try:
-                ydl.extract_info(
-                    message.body.decode('utf-8'), download=True
-                )
-                await message.ack()
-            except Exception as e:
-                print(e)
-
-    
     async def consume(self):
+        await self.log(f"Consuming queue {self.queue}...")
+
         conn = await self.connect()
         channel = await conn.channel()
         exchange = await self.declare_exchange(channel)
         queue = await channel.declare_queue(
-            self.queue, auto_delete=False, durable=True
+            self.queue, auto_delete=False, durable=True, exclusive=False
         )
 
         await queue.bind(exchange, self.key)
-        await queue.consume(self.callback)
+
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                await self.callback(message)
 
         return conn
+
+    async def message(self, body, content_type='text/plain'):
+        return aio_pika.Message(
+            body.encode('utf-8'), content_type=content_type
+        )
+
+
+    async def log(self, msg):
+        _time = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+        log_msg = f"[{_time}] {msg}"
+        els_msg = {
+            'text': msg,
+            'timestamp': _time
+        }
+        await Log(self.io_loop).publish(
+            json.dumps(els_msg), content_type='application/json'
+        )
+
+
+
+class Log(AsyncBaseQueue):
+    def __init__(self, io_loop, write=True):
+        super().__init__('downloader', 'log_queue', 'log', io_loop)
+
+        self.write = write
+        self.es = Elasticsearch()
+
+    async def callback(self, message):
+        msg = json.loads(message.body.decode('utf8'))
+        if self.write:
+            self.es.index(
+                index='youtube_downloader',
+                id=msg['timestamp'],
+                body=msg
+            )
+        await message.ack()
+
+
+class Videos(AsyncBaseQueue):
+    def __init__(self, io_loop):
+        super().__init__('downloader', 'videos_queue', 'videos', io_loop)
+
+    async def callback(self, message):
+        video = json.loads(message.body.decode('utf8'))
+        await self.log(f"Downloading {video['url']}")
+        with youtube_dl.YoutubeDL(OPTIONS) as ydl:
+            try:
+                ydl.extract_info(
+                    video['url'], download=True
+                )
+            except Exception as e:
+                await self.log(str(e))
+                print(e)
+            finally:
+                await message.ack()
