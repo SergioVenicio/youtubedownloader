@@ -1,7 +1,5 @@
-import os
 import sys
 import asyncio
-import aio_pika
 
 from rabbit import async_queues
 
@@ -10,6 +8,7 @@ __WORKERS__ = {
     'video': async_queues.Videos,
     'logger': async_queues.Log,
 }
+
 
 def get_workers(worker, loop):
     worker = __WORKERS__.get(worker)

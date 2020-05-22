@@ -1,7 +1,7 @@
 import os
 import aio_pika
-import asyncio
 import json
+import time
 import youtube_dl
 
 from elasticsearch import Elasticsearch
@@ -51,8 +51,6 @@ class AsyncBaseQueue:
         msg = await self.message(body, content_type)
         await exchange.publish(msg, self.key)
 
-        return
-
     async def consume(self):
         await self.log(f"Consuming queue {self.queue}...")
 
@@ -76,10 +74,10 @@ class AsyncBaseQueue:
             body.encode('utf-8'), content_type=content_type
         )
 
-
     async def log(self, msg):
         _time = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
-        log_msg = f"[{_time}] {msg}"
+        print(f"[{_time}] {msg}")
+
         els_msg = {
             'text': msg,
             'timestamp': _time
@@ -89,23 +87,30 @@ class AsyncBaseQueue:
         )
 
 
-
 class Log(AsyncBaseQueue):
     def __init__(self, io_loop, write=True):
         super().__init__('downloader', 'log_queue', 'log', io_loop)
 
         self.write = write
         self.es = Elasticsearch()
+        self.time = 10
 
     async def callback(self, message):
         msg = json.loads(message.body.decode('utf8'))
         if self.write:
-            self.es.index(
-                index='youtube_downloader',
-                id=msg['timestamp'],
-                body=msg
-            )
-        await message.ack()
+            try:
+                self.es.index(
+                    index='youtube_downloader',
+                    id=msg['timestamp'],
+                    body=msg
+                )
+            except Exception as e:
+                print(e)
+                time.sleep(self.time)
+                self.time *= 2
+            else:
+                self.time = 10
+                await message.ack()
 
 
 class Videos(AsyncBaseQueue):

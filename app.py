@@ -3,11 +3,14 @@ import asyncio
 import uvloop
 
 from sanic import response
-from sanic.log import logger
 from signal import signal, SIGINT
 
 from main import app, template
 from rabbit import async_queues
+from sanic_cors import CORS, cross_origin
+
+
+CORS(app)
 
 
 @app.route('/')
@@ -16,10 +19,21 @@ async def index(request):
     return response.html(html_string)
 
 
-@app.route('/download', methods=['POST'])
+@app.route('/download', methods=['POST', 'OPTIONS'])
 async def download(request):
-    [await u for u in map(publish, set(request.form.get('url').split(';')))]
-    return response.redirect(app.url_for('index'))
+    try:
+        urls = get_urls(request.json.get('url'))
+    except Exception:
+        urls = get_urls(request.form.get('url'))
+
+    async for url in urls:
+        await publish(url)
+    return response.json({'stauts': 'OK'})
+
+
+async def get_urls(urls):
+    for url in set(urls.split(';')):
+        yield url
 
 
 async def publish(url):

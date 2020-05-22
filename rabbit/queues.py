@@ -73,10 +73,7 @@ class AsyncBaseClass:
         self.exchange = exchange
         self.queue = queue
         self.key = key
-
-        # Connection 
         self.__open_conn = __conn.aio_connect(loop)
-
 
     async def queue_declare(self, durable=True):
         self.publisher_channel = await self.__open_conn.channel()

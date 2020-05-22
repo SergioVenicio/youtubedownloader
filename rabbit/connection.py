@@ -35,4 +35,3 @@ class Connection():
         )
 
         return connection
-
