@@ -5,9 +5,9 @@ import uvloop
 from sanic import response
 from signal import signal, SIGINT
 
-from main import app, template
-from rabbit import async_queues
-from sanic_cors import CORS, cross_origin
+from main import app
+from rabbit import queues
+from sanic_cors import CORS
 
 
 CORS(app)
@@ -15,18 +15,14 @@ CORS(app)
 
 @app.route('/')
 async def index(request):
-    html_string = await template('home.html')
-    return response.html(html_string)
+    return response.json({
+        "status": "OK"
+    })
 
 
 @app.route('/download', methods=['POST', 'OPTIONS'])
 async def download(request):
-    try:
-        urls = get_urls(request.json.get('url'))
-    except Exception:
-        urls = get_urls(request.form.get('url'))
-
-    async for url in urls:
+    async for url in get_urls(request.json.get('url')):
         await publish(url)
     return response.json({'stauts': 'OK'})
 
@@ -37,10 +33,8 @@ async def get_urls(urls):
 
 
 async def publish(url):
-    video_publisher = async_queues.Videos(asyncio.get_event_loop())
-    msg = json.dumps({
-        'url': url
-    })
+    video_publisher = queues.Videos(asyncio.get_event_loop())
+    msg = json.dumps({'url': url})
     await video_publisher.publish(msg, content_type='application/json')
 
 

@@ -1,49 +1,34 @@
-# External
-from datetime import datetime
-import youtube_dl
+import sys
+import asyncio
 
 from rabbit import queues
 
 
-OPTIONS = {
-    'outtmpl': 'videos/%(title)s.%(ext)s',
+__WORKERS__ = {
+    'video': queues.Videos,
+    'logger': queues.Log,
 }
 
-# Video QUEUE
-video_comsumer = queues.VideoQueue()
-video_comsumer.setup_consumer()
 
-# Logger Queue
-logger_publisher = queues.LoggerQueue()
-logger_publisher.setup_publisher()
-
-# Error QUEUE
-error_publisher = queues.ErrorQueue()
-error_publisher.setup_publisher()
+def get_workers(worker, loop):
+    worker = __WORKERS__.get(worker)
+    return worker(loop)
 
 
-def callback(channel, method, properties, body):
-    decoded_body = body.decode('utf-8')
+if __name__ == '__main__':
+    print('Wating messages...')
 
-    print(" [x] Received {%s}..." % decoded_body)
+    worker_name = 'video'
+    try:
+        worker_name = sys.argv[1]
+    except IndexError:
+        pass
+
+    loop = asyncio.get_event_loop()
+    worker = get_workers(worker_name, loop)
+    conn = loop.run_until_complete(worker.consume())
 
     try:
-        with youtube_dl.YoutubeDL(OPTIONS) as ydl:
-            response = ydl.extract_info(body.decode('utf-8'), download=True)
-    except Exception as e:
-        error = str(e)
-        logger_publisher.publish_msg({
-            'date': str(datetime.now()),
-            'error': error,
-            'service': 'video_consumer',
-        })
-        error_publisher.publish_msg(body)
-    else:
-        print(" [x] Result {%s}" % response['title'])
-
-    channel.basic_ack(delivery_tag=method.delivery_tag)
-
-
-video_comsumer.start_consuming(
-    callback
-)
+        loop.run_forever()
+    finally:
+        loop.run_until_complete(conn.close())
